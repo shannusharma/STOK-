@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Prediction Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Ye hai Header component. Isme hum top bar bana rahe hain jisme left side pe home icon aur text hai, aur right side pe hamburger menu icon (three lines) hai. Kyunki user ko easy navigation chahiye, aur mobile friendly banana hai. Agar tum home icon change karna chaho to <i className="fas fa-home"></i> ko replace karo apne icon se.
+    const Header = ({ toggleSidebar }) => {
+      return (
+        <header className="bg-gray-800 text-white p-4 flex justify-between items-center">
+          <div className="flex items-center">
+            <i className="fas fa-home mr-2"></i>
+            <h1 className="text-xl font-bold">Home</h1>
+          </div>
+          <button onClick={toggleSidebar}>
+            <i className="fas fa-bars text-2xl"></i>
+          </button>
+        </header>
+      );
+    };
+
+    // Ye Sidebar component hai. Ye right side se open hota hai jab hamburger click karte ho. Isme 6 navigation items hain with icons and names both. Kyunki user ne kaha icons aur name dono use karo. Ye sidebar toggle state pe depend karta hai open/close ke liye. Agar tum extra item add karna chaho to navItems array mein naya object add karo, jaise { name: 'New', id: 'new', icon: 'fas fa-new' }.
+    const Sidebar = ({ isOpen, setActiveTab, toggleSidebar }) => {
+      const navItems = [
+        { name: 'Home', id: 'home', icon: 'fas fa-home' },
+        { name: 'Dashboard', id: 'dashboard', icon: 'fas fa-chart-line' },
+        { name: 'News', id: 'news', icon: 'fas fa-newspaper' },
+        { name: 'Learn', id: 'learn', icon: 'fas fa-book' },
+        { name: 'Settings', id: 'settings', icon: 'fas fa-cog' },
+        { name: 'Profile', id: 'profile', icon: 'fas fa-user' },
+         { name: 'Contact us', id: 'Contact', icon: "fa-solid fa-comments"}
+      ];
+
+      return (
+        <div className={`fixed top-0 right-0 h-full w-64 bg-gray-800 text-white transform ${isOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 ease-in-out z-50`}>
+          <button className="absolute top-4 right-4" onClick={toggleSidebar}>
+            <i className="fas fa-times"></i>
+          </button>
+          <ul className="mt-16 space-y-4 p-4">
+            {navItems.map((item) => (
+              <li key={item.id}>
+                <button
+                  className="flex items-center w-full text-left px-4 py-2 hover:bg-gray-700 rounded"
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    toggleSidebar();
+                  }}
+                >
+                  <i className={`${item.icon} mr-2`}></i>
+                  {item.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    };
+
+    // Ye HomeContent component hai. Jab Home click karte ho to welcome message aur paragraph show hota hai. Kyunki user ne kaha welcome user and some things in paragraph. Agar tum paragraph change karna chaho to <p> tag ke andar text replace karo.
+    const HomeContent = () => (
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-4">Welcome to Stock Prediction App!</h2>
+        <p className="text-gray-600">Here you can predict stock risks, view news, learn patterns, and manage your profile. Start exploring now.</p>
+      </div>
+    );
+
+    // Ye DashboardContent component hai. Isme graph area hai (placeholder with Chart.js), search input for stock name, predict button. Jab search karte ho to graph show hota hai aur risk message. Kyunki user ne kaha graph area, search option, predict only risk. Data nahi add kar rahe, bas placeholder. Agar tum apna fetching code link karna chaho to useEffect ya button click pe apna fetch function call karo, jaise fetchStockData(stock). Phir chartRef.current.data ko update karo real data se.
+    const DashboardContent = () => {
+      const [stock, setStock] = useState('');
+      const [risk, setRisk] = useState('');
+      const [showGraph, setShowGraph] = useState(false);
+      const chartRef = useRef(null);
+
+      const handlePredict = () => {
+        // Ye placeholder hai risk ke liye. Real mein yahan apna prediction code dalo.
+        setRisk(`Risk for ${stock}: Medium (Placeholder)`);
+        setShowGraph(true);
+        // Graph update: Real data fetch kar ke labels aur data update karo.
+      };
+
+      useEffect(() => {
+        if (showGraph && chartRef.current) {
+          const ctx = chartRef.current.getContext('2d');
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+              datasets: [{
+                label: stock || 'Stock Price',
+                data: [65, 59, 80, 81, 56, 55], // Placeholder data, replace with fetched
+                borderColor: 'blue',
+              }]
+            },
+            options: { responsive: true }
+          });
+        }
+      }, [showGraph, stock]);
+
+      return (
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Search stock name"
+              className="border p-2 mr-2"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+            />
+            <button className="bg-blue-500 text-white p-2" onClick={handlePredict}>
+              Predict
+            </button>
+          </div>
+          {showGraph && <canvas ref={chartRef} className="mb-4"></canvas>}
+          {risk && <p className="text-red-600">{risk}</p>}
+        </div>
+      );
+    };
+
+    // Ye NewsContent component hai. Isme flashcard style news cards hain, placeholder. Kyunki user ne kaha news like flashcard. Agar real news add karna to array mein real data dalo.
+    const NewsContent = () => (
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-4">News</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow">News 1: Market up...</div>
+          <div className="bg-white p-4 rounded-lg shadow">News 2: Stocks down...</div>
+          <div className="bg-white p-4 rounded-lg shadow">News 3: Economy news...</div>
+        </div>
+      </div>
+    );
+
+    // Ye LearnContent component hai. Welcome learner aur important graph patterns placeholders. Kyunki user ne kaha welcome learner and some important graph patterns. Agar images add karna to <img> tags dalo.
+    const LearnContent = () => (
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-4">Welcome Learner!</h2>
+        <p className="text-gray-600 mb-4">Learn about important graph patterns:</p>
+        <ul className="list-disc pl-5">
+          <li>Head and Shoulders</li>
+          <li>Double Top</li>
+          <li>Cup and Handle</li>
+        </ul>
+      </div>
+    );
+
+    // Ye SettingsContent component hai. Options for logout, theme, graph color change. Kyunki user ne kaha logout, theme, graph colour changing. Ye bas buttons hain, no real function. Agar function add karna to onClick pe code dalo.
+    const SettingsContent = () => (
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-4">Settings</h2>
+        <button className="block bg-red-500 text-white p-2 mb-2">Logout</button>
+        <select className="block border p-2 mb-2">
+          <option>Theme: Light</option>
+          <option>Theme: Dark</option>
+        </select>
+        <select className="block border p-2">
+          <option>Graph Color: Blue</option>
+          <option>Graph Color: Green</option>
+        </select>
+      </div>
+    );
+
+    // Ye ProfileContent component hai. User image, name, username, basic details placeholders. Kyunki user ne kaha add image, name, username, all basic details. Agar real data to state use karo.
+    const ProfileContent = () => (
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-4">Profile</h2>
+        <img src="https://via.placeholder.com/150" alt="Profile" className="rounded-full mb-4" />
+        <p>Name: John Doe</p>
+        <p>Username: johndoe</p>
+        <p>Email: john@example.com</p>
+      </div>
+    );
+
+    // Ye main App component hai. Yahan state manage kar rahe hain active tab aur sidebar open ke liye. Kyunki multiple sections handle karne ke liye. Render content switch se tab ke hisab se. Agar new tab add karna to switch mein naya case add karo.
+    const App = () => {
+      const [activeTab, setActiveTab] = useState('home');
+      const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+      const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+      const renderContent = () => {
+        switch (activeTab) {
+          case 'home': return <HomeContent />;
+          case 'dashboard': return <DashboardContent />;
+          case 'news': return <NewsContent />;
+          case 'learn': return <LearnContent />;
+          case 'settings': return <SettingsContent />;
+          case 'profile': return <ProfileContent />;
+          default: return <HomeContent />;
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-100">
+          <Header toggleSidebar={toggleSidebar} />
+          <Sidebar isOpen={isSidebarOpen} setActiveTab={setActiveTab} toggleSidebar={toggleSidebar} />
+          <main>{renderContent()}</main>
+        </div>
+      );
+    };
+
+    // Ye app render kar raha hai. Root mein App component dal rahe hain. Kyunki React ko DOM mein render karna padta hai.
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+/* Ye root styles hain, body aur global ke liye. Isse pura app ka base look set hota hai, jaise font family aur background. Agar change karna to font-family replace karo. */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  background-color: #f0f4f8;
+  color: #333;
+}
+
+/* Header ke liye extra styles, shadow add kiya attractive ke liye. Kyunki top bar ko highlight karna. Agar color change to bg-color badlo. */
+header {
+  background-color: #1e3a8a !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar ke liye gradient background aur smooth hover effects. Isse modern look milta hai. Hover pe scale add kiya animation ke liye. Agar animation nahi chahiye to transform remove karo. */
+.sidebar {
+  background: linear-gradient(to bottom, #1e3a8a, #3b82f6);
+}
+
+.sidebar button {
+  transition: all 0.3s ease;
+}
+
+.sidebar button:hover {
+  transform: scale(1.05);
+  background-color: #2563eb !important;
+}
+
+/* Content sections ke liye card styles with hover lift. Har section ko attractive banane ke liye border radius aur shadow. Agar color scheme change to bg-white ko apna color do. */
+.content-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.content-card:hover {
+  transform: translateY(-5px);
+}
+
+/* Buttons ke liye custom styles, gradient aur rounded. Predict button etc ko attractive banane ke liye. Agar different color to background badlo. */
+button {
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+/* Input fields ke liye modern look with focus effects. Search input ko better banane ke liye. Focus pe border color change. */
+input {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.5rem;
+  transition: border-color 0.3s ease;
+}
+
+input:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Chart container ke liye extra padding aur border. Graph area ko frame karne ke liye. Agar size change to width/height adjust karo. */
+canvas {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Profile image ke liye circular border aur shadow. Attractive profile section ke liye. Src change karne se image badalta hai, lekin style yahi. */
+img {
+  border: 4px solid #3b82f6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* News cards ke liye hover zoom effect. Flashcard jaise look ke liye. Grid items pe apply. */
+.grid > div {
+  transition: transform 0.3s ease;
+}
+
+.grid > div:hover {
+  transform: scale(1.02);
+}
+
+/* Settings selects aur buttons ke liye consistent styling. Theme options etc ko match karne ke liye. */
+select {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.5rem;
+  width: 100%;
+}
+
+/* Overall app ke liye smooth transitions. Pura app fluid feel ke liye. */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
