@@ -27,9 +27,9 @@
                     <span class="material-icons-sharp">dashboard</span>
                     <h3>Dashboard</h3>
                 </a>
-                <a href="#" data-page="stocks" class="nav-link">
+                <a href="#" data-page="portfolio" class="nav-link">
                     <span class="material-icons-sharp">inventory</span>
-                    <h3>Stocks</h3>
+                    <h3>Portfolio</h3>
                 </a>
                 <a href="#" data-page="predictions" class="nav-link">
                     <span class="material-icons-sharp">insights</span>
@@ -73,6 +73,57 @@
         </main>
     </div>
 
+    <!-- ========== STOCK DETAIL MODAL ========== -->
+    <div id="stock-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-stock-name">Stock Name</h2>
+                <span class="close-modal" onclick="closeStockDetail()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="stock-info-row">
+                    <div class="info-item">
+                        <small>Current Price</small>
+                        <h3 id="modal-current-price">$0.00</h3>
+                    </div>
+                    <div class="info-item">
+                        <small>Change</small>
+                        <h3 id="modal-change" class="success-text">+0.00%</h3>
+                    </div>
+                    <div class="info-item">
+                        <small>Open</small>
+                        <h3 id="modal-open">$0.00</h3>
+                    </div>
+                    <div class="info-item">
+                        <small>High</small>
+                        <h3 id="modal-high">$0.00</h3>
+                    </div>
+                    <div class="info-item">
+                        <small>Low</small>
+                        <h3 id="modal-low">$0.00</h3>
+                    </div>
+                    <div class="info-item">
+                        <small>Volume</small>
+                        <h3 id="modal-volume">0</h3>
+                    </div>
+                </div>
+                
+                <!-- Chart Type Buttons -->
+                <div class="chart-controls">
+                    <button class="chart-btn active" onclick="switchChartType('candlestick')">Candlestick</button>
+                    <button class="chart-btn" onclick="switchChartType('line')">Line</button>
+                    <button class="chart-btn" onclick="switchChartType('area')">Area</button>
+                    <button class="chart-btn" onclick="switchChartType('bar')">Volume</button>
+                </div>
+                
+                <!-- Chart Canvas -->
+                <div class="chart-wrapper">
+                    <canvas id="modal-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Load Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
@@ -83,7 +134,7 @@
                 <div class="top-section">
                     <div class="search_div">
                         <span class="material-icons-sharp">search</span>
-                        <input type="search" placeholder="Search stocks, news, predictions...">
+                        <input type="search" id="stock-search-input" placeholder="Search stocks, news, predictions..." onkeypress="handleSearchEnter(event)">
                     </div>
                     <div class="date">
                         <input type="date" id="date-input">
@@ -93,24 +144,24 @@
                 <h1>Dashboard</h1>
 
                 <div class="market-sentiment">
-                    <div class="sentiment-card bullish">
+                    <div class="sentiment-card bullish" id="sensex-card" onclick="openStockDetail('SENSEX')" style="cursor: pointer;">
                         <div class="icon-wrapper">
                             <span class="material-icons-sharp">trending_up</span>
                         </div>
                         <div class="content">
-                            <h3> Stocks Name</h3>
-                            <h2> </h2>
-                            <small class="success-text"> from last week</small>
+                            <h3>SENSEX</h3>
+                            <h2 id="sensex-price" class="loading-pulse">Loading...</h2>
+                            <small class="success-text" id="sensex-change">from last week</small>
                         </div>
                     </div>
-                    <div class="sentiment-card bearish">
+                    <div class="sentiment-card bullish" id="nifty-card" onclick="openStockDetail('NIFTY50')" style="cursor: pointer;">
                         <div class="icon-wrapper">
-                            <span class="material-icons-sharp">trending_down</span>
+                            <span class="material-icons-sharp">trending_up</span>
                         </div>
                         <div class="content">
-                            <h3> Stocks Name</h3>
-                            <h2> </h2>
-                            <small class="danger-text"> from last week</small>
+                            <h3>NIFTY 50</h3>
+                            <h2 id="nifty-price" class="loading-pulse">Loading...</h2>
+                            <small class="success-text" id="nifty-change">from last week</small>
                         </div>
                     </div>
                 </div>
@@ -133,12 +184,12 @@
                 </div>
             `,
 
-            stocks: `
-                <h1>Stocks</h1>
+            portfolio: `
+                <h1>Portfolio</h1>
                 <p class="text-muted">View and manage your stock portfolio</p>
 
                 <div class="stocks-grid">
-                    <div class="stock-card">
+                    <div class="stock-card" onclick="openStockDetail('AAPL')" style="cursor: pointer;">
                         <div class="stock-header">
                             <h3>AAPL</h3>
                             <span class="success-text">+2.5%</span>
@@ -149,7 +200,7 @@
                             <span class="material-icons-sharp">show_chart</span>
                         </div>
                     </div>
-                    <div class="stock-card">
+                    <div class="stock-card" onclick="openStockDetail('GOOGL')" style="cursor: pointer;">
                         <div class="stock-header">
                             <h3>GOOGL</h3>
                             <span class="success-text">+1.8%</span>
@@ -160,7 +211,7 @@
                             <span class="material-icons-sharp">show_chart</span>
                         </div>
                     </div>
-                    <div class="stock-card">
+                    <div class="stock-card" onclick="openStockDetail('MSFT')" style="cursor: pointer;">
                         <div class="stock-header">
                             <h3>MSFT</h3>
                             <span class="danger-text">-0.5%</span>
@@ -171,7 +222,7 @@
                             <span class="material-icons-sharp">show_chart</span>
                         </div>
                     </div>
-                    <div class="stock-card">
+                    <div class="stock-card" onclick="openStockDetail('TSLA')" style="cursor: pointer;">
                         <div class="stock-header">
                             <h3>TSLA</h3>
                             <span class="success-text">+3.2%</span>
@@ -182,7 +233,7 @@
                             <span class="material-icons-sharp">show_chart</span>
                         </div>
                     </div>
-                    <div class="stock-card">
+                    <div class="stock-card" onclick="openStockDetail('AMZN')" style="cursor: pointer;">
                         <div class="stock-header">
                             <h3>AMZN</h3>
                             <span class="success-text">+1.5%</span>
@@ -193,7 +244,7 @@
                             <span class="material-icons-sharp">show_chart</span>
                         </div>
                     </div>
-                    <div class="stock-card">
+                    <div class="stock-card" onclick="openStockDetail('NVDA')" style="cursor: pointer;">
                         <div class="stock-header">
                             <h3>NVDA</h3>
                             <span class="success-text">+4.8%</span>
@@ -267,8 +318,10 @@
                                 <th>Total</th>
                             </tr>
                         </thead>
-                        
-                                
+                        <tbody>
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--color-dark-variant);">No trading history available</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -279,87 +332,146 @@
                 <p class="text-muted">Your favorite stocks and watchlist</p>
 
                 <div class="favorites-grid">
-                    <div class="favorite-card">
+                    <div class="favorite-card" onclick="openStockDetail('AAPL')" style="cursor: pointer;">
                         <span class="material-icons-sharp favorite-icon">star</span>
-                        
+                        <h3>AAPL</h3>
                         <span class="success-text">+2.5%</span>
                     </div>
-                    <div class="favorite-card">
+                    <div class="favorite-card" onclick="openStockDetail('NVDA')" style="cursor: pointer;">
                         <span class="material-icons-sharp favorite-icon">star</span>
-                        
+                        <h3>NVDA</h3>
                         <span class="success-text">+4.8%</span>
                     </div>
-                    <div class="favorite-card">
+                    <div class="favorite-card" onclick="openStockDetail('GOOGL')" style="cursor: pointer;">
                         <span class="material-icons-sharp favorite-icon">star</span>
-                        
+                        <h3>GOOGL</h3>
                         <span class="success-text">+1.8%</span>
                     </div>
                 </div>
             `,
 
-            news: `
-                <h1>News</h1>
-                <p class="text-muted">Latest market news and updates</p>
+           news: `
+    <h1>Market News Hub</h1>
+    <p class="text-muted">Latest news from multiple trusted sources</p>
 
-                <div class="news-list">
-                    <div class="news-card">
-                        <div class="news-header">
-                            <h3>Tech Stocks Rally on Strong Earnings</h3>
-                            <small>2 hours ago</small>
-                        </div>
-                        <p>Major technology companies reported better-than-expected earnings, driving market sentiment...</p>
-                        <a href="#" class="read-more">Read more →</a>
-                    </div>
-                    <div class="news-card">
-                        <div class="news-header">
-                            <h3>Federal Reserve Holds Interest Rates Steady</h3>
-                            <small>5 hours ago</small>
-                        </div>
-                        <p>The Federal Reserve announced it will maintain current interest rates as inflation shows signs...</p>
-                        <a href="#" class="read-more">Read more →</a>
-                    </div>
-                    <div class="news-card">
-                        <div class="news-header">
-                            <h3>Electric Vehicle Market Sees Record Growth</h3>
-                            <small>1 day ago</small>
-                        </div>
-                        <p>EV manufacturers reported record sales this quarter, with Tesla and Rivian leading the charge...</p>
-                        <a href="#" class="read-more">Read more →</a>
-                    </div>
-                </div>
-            `,
+    <div class="news-sources">
+        <button class="source-btn active" onclick="changeSource('all')" data-source="all">
+            <span class="material-icons-sharp">dashboard</span>
+            All Sources
+        </button>
+        <button class="source-btn" onclick="changeSource('cnbc')" data-source="cnbc">
+            <span class="material-icons-sharp">newspaper</span>
+            CNBC TV18
+        </button>
+        <button class="source-btn" onclick="changeSource('moneycontrol')" data-source="moneycontrol">
+            <span class="material-icons-sharp">attach_money</span>
+            MoneyControl
+        </button>
+        <button class="source-btn" onclick="changeSource('economictimes')" data-source="economictimes">
+            <span class="material-icons-sharp">trending_up</span>
+            Economic Times
+        </button>
+        <button class="source-btn" onclick="changeSource('research360')" data-source="research360">
+            <span class="material-icons-sharp">analytics</span>
+            Research360
+        </button>
+    </div>
 
-            messages: `
-                <h1>Messages</h1>
-                <p class="text-muted">Your notifications and alerts</p>
+    <div class="news-filter">
+        <button class="filter-btn active" onclick="filterNews('all')">All News</button>
+        <button class="filter-btn" onclick="filterNews('market')">Market</button>
+        <button class="filter-btn" onclick="filterNews('stock')">Stocks</button>
+        <button class="filter-btn" onclick="filterNews('economy')">Economy</button>
+    </div>
 
-                <div class="messages-list">
-                    <div class="message-card unread">
-                        <span class="material-icons-sharp">notifications_active</span>
-                        <div class="message-content">
-                            <h3>Price Alert: AAPL reached $185.50</h3>
-                            <p>Your target price for Apple stock has been reached</p>
-                            <small>10 minutes ago</small>
-                        </div>
-                    </div>
-                    <div class="message-card">
-                        <span class="material-icons-sharp">info</span>
-                        <div class="message-content">
-                            <h3>Prediction Update Available</h3>
-                            <p>New AI predictions are ready for your watchlist</p>
-                            <small>2 hours ago</small>
-                        </div>
-                    </div>
-                    <div class="message-card">
-                        <span class="material-icons-sharp">trending_up</span>
-                        <div class="message-content">
-                            <h3>Portfolio Performance Update</h3>
-                            <p>Your portfolio is up 3.2% this week</p>
-                            <small>1 day ago</small>
-                        </div>
-                    </div>
-                </div>
-            `,
+    <div class="auto-refresh-info">
+        <span class="material-icons-sharp">autorenew</span>
+        <span>Auto-refreshing every 5 minutes</span>
+        <span id="last-update">Last updated: Just now</span>
+    </div>
+
+    <div id="news-loading" class="loading-spinner">
+        <span class="material-icons-sharp rotating">refresh</span>
+        <p>Loading news from all sources...</p>
+    </div>
+
+    <div class="news-list" id="news-messages-list">
+        <!-- News will be loaded here -->
+    </div>
+
+    <div class="news-footer">
+        <button class="refresh-btn" onclick="manualRefresh()">
+            <span class="material-icons-sharp">refresh</span>
+            Refresh Now
+        </button>
+        <button class="toggle-auto-refresh" onclick="toggleAutoRefresh()">
+            <span class="material-icons-sharp">pause</span>
+            <span id="auto-refresh-text">Pause Auto-Refresh</span>
+        </button>
+    </div>
+`,
+
+         messages: `
+    <h1>Messages & Notifications</h1>
+    <p class="text-muted">Important updates from the administrator</p>
+
+    <div class="messages-list">
+        <div class="message-card unread">
+            <span class="material-icons-sharp">notifications_active</span>
+            <div class="message-content">
+                <h3>Welcome to Markstro Prediction Dashboard!</h3>
+                <p>Your account has been successfully activated. Start exploring market predictions and portfolio management tools.</p>
+                <small>2 hours ago • Admin</small>
+            </div>
+        </div>
+        <div class="message-card unread">
+            <span class="material-icons-sharp">info</span>
+            <div class="message-content">
+                <h3>New Feature: Multi-Source News Feed</h3>
+                <p>Check out our new News section with real-time updates from CNBC TV18, MoneyControl, Economic Times, and Research360!</p>
+                <small>5 hours ago • System</small>
+            </div>
+        </div>
+        <div class="message-card">
+            <span class="material-icons-sharp">campaign</span>
+            <div class="message-content">
+                <h3>Market Alert: High Volatility Expected</h3>
+                <p>Due to upcoming economic policy announcements, expect increased market volatility this week. Review your portfolio accordingly.</p>
+                <small>1 day ago • Admin</small>
+            </div>
+        </div>
+        <div class="message-card">
+            <span class="material-icons-sharp">trending_up</span>
+            <div class="message-content">
+                <h3>Portfolio Performance Update</h3>
+                <p>Your portfolio is up 3.2% this week. Great job maintaining a diversified investment strategy!</p>
+                <small>2 days ago • System</small>
+            </div>
+        </div>
+        <div class="message-card">
+            <span class="material-icons-sharp">security</span>
+            <div class="message-content">
+                <h3>Security Update</h3>
+                <p>We've enhanced our security features. Please review your account settings and enable two-factor authentication.</p>
+                <small>3 days ago • Admin</small>
+            </div>
+        </div>
+        <div class="message-card">
+            <span class="material-icons-sharp">school</span>
+            <div class="message-content">
+                <h3>New Tutorial Available</h3>
+                <p>Learn how to use our AI-powered prediction tools. Check the Help section for video tutorials.</p>
+                <small>5 days ago • System</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-note">
+        <span class="material-icons-sharp">info</span>
+        <p>These messages are sent by the administrator. You cannot reply to or create messages here.</p>
+    </div>
+`,
+
 
             settings: `
                 <div class="settings-header">
@@ -516,6 +628,11 @@
                 initDashboard();
             } else if(pageName === 'settings') {
                 initSettings();
+            } else if(pageName === 'news') {
+                setTimeout(() => {
+                    fetchMarketNews();
+                    startAutoRefresh();
+                }, 100);
             }
 
             // Scroll to top
@@ -643,6 +760,266 @@
             }
         }
 
+
+
+        // ========== MULTI-SOURCE NEWS FEED WITH AUTO-REFRESH ==========
+let allNews = [];
+let currentFilter = 'all';
+let currentSource = 'all';
+let autoRefreshEnabled = true;
+let autoRefreshInterval = null;
+
+const NEWS_SOURCES = {
+    cnbc: {
+        name: 'CNBC TV18',
+        urls: [
+            'https://www.cnbctv18.com/rss/market.xml',
+            'https://www.cnbctv18.com/rss/business.xml'
+        ],
+        icon: 'newspaper'
+    },
+    moneycontrol: {
+        name: 'MoneyControl',
+        urls: [
+            'https://www.moneycontrol.com/rss/latestnews.xml',
+            'https://www.moneycontrol.com/rss/marketoutlook.xml'
+        ],
+        icon: 'attach_money'
+    },
+    economictimes: {
+        name: 'Economic Times',
+        urls: [
+            'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms',
+            'https://economictimes.indiatimes.com/news/economy/rssfeeds/1373380680.cms'
+        ],
+        icon: 'trending_up'
+    },
+    research360: {
+        name: 'Research360',
+        urls: [
+            'https://research360.onelink.me/rss/news.xml'
+        ],
+        icon: 'analytics'
+    }
+};
+
+async function fetchMarketNews() {
+    const newsContainer = document.getElementById('news-messages-list');
+    const loadingDiv = document.getElementById('news-loading');
+    
+    if(loadingDiv) loadingDiv.style.display = 'block';
+    
+    try {
+        allNews = [];
+        
+        let sourcesToFetch = [];
+        if(currentSource === 'all') {
+            sourcesToFetch = Object.keys(NEWS_SOURCES);
+        } else {
+            sourcesToFetch = [currentSource];
+        }
+        
+        for(let sourceKey of sourcesToFetch) {
+            const source = NEWS_SOURCES[sourceKey];
+            for(let rssUrl of source.urls) {
+                try {
+                    const API_URL = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+                    const response = await fetch(API_URL);
+                    const data = await response.json();
+                    
+                    if(data.status === 'ok' && data.items) {
+                        data.items.forEach(item => {
+                            item.sourceName = source.name;
+                            item.sourceKey = sourceKey;
+                            item.sourceIcon = source.icon;
+                        });
+                        allNews = allNews.concat(data.items);
+                    }
+                } catch(error) {
+                    console.error(`Error fetching from ${source.name}:`, error);
+                }
+            }
+        }
+        
+        allNews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        allNews = allNews.filter((article, index, self) =>
+            index === self.findIndex(t => t.title === article.title)
+        );
+        
+        displayNews(allNews);
+        updateLastRefreshTime();
+        
+        if(loadingDiv) loadingDiv.style.display = 'none';
+        
+    } catch(error) {
+        console.error('Error fetching news:', error);
+        if(newsContainer) {
+            newsContainer.innerHTML = `
+                <div class="news-card error-card">
+                    <span class="material-icons-sharp">error</span>
+                    <div class="message-content">
+                        <h3>Unable to load news</h3>
+                        <p>Please check your internet connection and try again</p>
+                        <small>Error: ${error.message}</small>
+                    </div>
+                </div>
+            `;
+        }
+        if(loadingDiv) loadingDiv.style.display = 'none';
+    }
+}
+
+function displayNews(newsArray) {
+    const newsContainer = document.getElementById('news-messages-list');
+    if(!newsContainer) return;
+    
+    if(newsArray.length === 0) {
+        newsContainer.innerHTML = `
+            <div class="news-card">
+                <span class="material-icons-sharp">inbox</span>
+                <div class="message-content">
+                    <h3>No news available</h3>
+                    <p>Try selecting different sources or filters</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    newsContainer.innerHTML = newsArray.map((article, index) => {
+        const timeAgo = getTimeAgo(article.pubDate);
+        const category = article.categories && article.categories.length > 0 ? article.categories[0] : 'Market';
+        
+        const description = article.description ? 
+            article.description.replace(/<[^>]*>/g, '').substring(0, 150) + '...' : 
+            'Click to read more';
+        
+        return `
+            <div class="news-card ${index < 5 ? 'fresh-news' : ''}" onclick="window.open('${article.link}', '_blank')">
+                <div class="news-header">
+                    <h3>${article.title}</h3>
+                    <small class="news-source-badge">
+                        <span class="material-icons-sharp">${article.sourceIcon}</span>
+                        ${article.sourceName}
+                    </small>
+                </div>
+                <p>${description}</p>
+                <div class="news-meta">
+                    <small class="news-time">
+                        <span class="material-icons-sharp">schedule</span>
+                        ${timeAgo}
+                    </small>
+                    <span class="category-badge">${category}</span>
+                    <span class="read-more">Read more →</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function changeSource(source) {
+    currentSource = source;
+    document.querySelectorAll('.source-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.source-btn').classList.add('active');
+    fetchMarketNews();
+}
+
+function filterNews(category) {
+    currentFilter = category;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    let filtered = allNews;
+    if(category !== 'all') {
+        filtered = allNews.filter(article => {
+            const cats = article.categories || [];
+            const title = article.title.toLowerCase();
+            const desc = (article.description || '').toLowerCase();
+            const searchTerm = category.toLowerCase();
+            
+            return cats.some(cat => cat.toLowerCase().includes(searchTerm)) ||
+                   title.includes(searchTerm) ||
+                   desc.includes(searchTerm);
+        });
+    }
+    displayNews(filtered);
+}
+
+function manualRefresh() {
+    fetchMarketNews();
+    const btn = event.target.closest('.refresh-btn');
+    const icon = btn.querySelector('.material-icons-sharp');
+    icon.classList.add('rotating');
+    setTimeout(() => icon.classList.remove('rotating'), 1000);
+}
+
+function toggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled;
+    const btn = event.target.closest('.toggle-auto-refresh');
+    const icon = btn.querySelector('.material-icons-sharp');
+    const text = document.getElementById('auto-refresh-text');
+    
+    if(autoRefreshEnabled) {
+        icon.textContent = 'pause';
+        text.textContent = 'Pause Auto-Refresh';
+        startAutoRefresh();
+    } else {
+        icon.textContent = 'play_arrow';
+        text.textContent = 'Resume Auto-Refresh';
+        stopAutoRefresh();
+    }
+}
+
+function startAutoRefresh() {
+    if(autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+        if(autoRefreshEnabled) {
+            console.log('Auto-refreshing news...');
+            fetchMarketNews();
+        }
+    }, 300000);
+}
+
+function stopAutoRefresh() {
+    if(autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+function updateLastRefreshTime() {
+    const lastUpdateEl = document.getElementById('last-update');
+    if(lastUpdateEl) {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-IN', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        lastUpdateEl.textContent = `Last updated: ${timeString}`;
+    }
+}
+
+function getTimeAgo(dateString) {
+    if(!dateString) return 'Recently';
+    
+    const articleDate = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - articleDate) / 1000 / 60);
+    
+    if(diff < 1) return 'Just now';
+    if(diff < 60) return `${diff} minute${diff > 1 ? 's' : ''} ago`;
+    if(diff < 1440) return `${Math.floor(diff / 60)} hour${Math.floor(diff / 60) > 1 ? 's' : ''} ago`;
+    if(diff < 10080) return `${Math.floor(diff / 1440)} day${Math.floor(diff / 1440) > 1 ? 's' : ''} ago`;
+    
+    return articleDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+
+
+window.addEventListener('beforeunload', () => {
+    stopAutoRefresh();
+});
+
         // ========== INITIALIZE APP ==========
         window.addEventListener('DOMContentLoaded', function() {
             // Load saved theme
@@ -666,5 +1043,8 @@
             loadPage(lastPage);
         });
     </script>
+    
+    <!-- Load external UI.js file for live data functionality -->
+    <script src="ui.js"></script>
 </body>
 </html>
