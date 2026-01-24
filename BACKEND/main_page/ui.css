@@ -2174,3 +2174,72 @@ body.dark-mode .chart-wrapper {
     color: var(--color-light);
     border-color: var(--color-dark-variant);
 }
+
+/* Search Suggestions Dropdown */
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid var(--color-light);
+    border-radius: var(--border-radius-2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 0.5rem;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-light);
+    transition: background 0.2s;
+}
+
+.suggestion-item:hover {
+    background: var(--color-light);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-symbol {
+    font-weight: 700;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+}
+
+.suggestion-name {
+    color: var(--color-dark);
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+}
+
+.suggestion-type {
+    color: var(--color-dark-variant);
+    font-size: 0.8rem;
+}
+
+/* Dark Mode */
+.dark-mode .search-suggestions {
+    background: var(--color-dark);
+    border-color: var(--color-dark-variant);
+}
+
+.dark-mode .suggestion-item {
+    border-bottom-color: var(--color-dark-variant);
+}
+
+.dark-mode .suggestion-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Make search container relative for dropdown positioning */
+.search_div {
+    position: relative;
+}
