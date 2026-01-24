@@ -1,130 +1,13 @@
-// ========== MARKSTRO PREDICTION DASHBOARD ==========
-// Version: 2.0 - Secure & Feature-Rich
-// Last Updated: January 2026
+// ========== FRONTEND ONLY - NO API KEYS ==========
+// This file handles ONLY UI logic
+// All API calls go through backend
 
-// ========== SECURITY CONFIGURATION ==========
+// ========== CONFIGURATION ==========
 const CONFIG = {
-    // API Configuration (Environment-based)
-    API_KEY: getSecureAPIKey(),
-    API_BASE: 'https://www.alphavantage.co/query',
-    USE_BACKEND: false, // Set to true if using backend API
-    BACKEND_URL: 'http://localhost:8000/api',
-    
-    // Rate Limiting
-    RATE_LIMIT: {
-        MAX_CALLS_PER_MINUTE: 5,
-        COOLDOWN_MS: 60000
-    },
-    
-    // Cache Settings
-    CACHE: {
-        ENABLED: true,
-        DURATION_MS: 300000 // 5 minutes
-    },
-    
-    // Indian Market Proxies
-    INDIAN_PROXIES: {
-        'SENSEX': 'INDA',
-        'NIFTY50': 'INDY'
-    }
+    BACKEND_URL: 'http://localhost:8000/api', // Your backend server
+    CACHE_DURATION: 300000, // 5 minutes
+    AUTO_REFRESH_INTERVAL: 300000 // 5 minutes
 };
-
-// Secure API Key Management
-function getSecureAPIKey() {
-    // Try to get from environment variable first (most secure)
-    if (typeof process !== 'undefined' && process.env && process.env.ALPHA_VANTAGE_KEY) {
-        return process.env.ALPHA_VANTAGE_KEY;
-    }
-    
-    // Try localStorage (for client-side storage)
-    const storedKey = localStorage.getItem('api_key_encrypted');
-    if (storedKey) {
-        return atob(storedKey); // Basic decoding (use stronger encryption in production)
-    }
-    
-    // Fallback (least secure - replace with your key)
-    console.warn('⚠️ Using fallback API key. Please configure secure key storage.');
-    return 'YAC9TK9BLPINAFWJ';
-}
-
-// Store encrypted API key
-function setSecureAPIKey(key) {
-    if (!key || key.length < 10) {
-        console.error('Invalid API key');
-        return false;
-    }
-    localStorage.setItem('api_key_encrypted', btoa(key)); // Basic encoding
-    console.log('✅ API key stored securely');
-    return true;
-}
-
-// ========== RATE LIMITING SYSTEM ==========
-class RateLimiter {
-    constructor(maxCalls, cooldownMs) {
-        this.maxCalls = maxCalls;
-        this.cooldownMs = cooldownMs;
-        this.calls = [];
-    }
-    
-    canMakeRequest() {
-        const now = Date.now();
-        this.calls = this.calls.filter(time => now - time < this.cooldownMs);
-        return this.calls.length < this.maxCalls;
-    }
-    
-    recordRequest() {
-        this.calls.push(Date.now());
-    }
-    
-    getWaitTime() {
-        if (this.calls.length === 0) return 0;
-        const oldest = this.calls[0];
-        const elapsed = Date.now() - oldest;
-        return Math.max(0, this.cooldownMs - elapsed);
-    }
-}
-
-const rateLimiter = new RateLimiter(
-    CONFIG.RATE_LIMIT.MAX_CALLS_PER_MINUTE,
-    CONFIG.RATE_LIMIT.COOLDOWN_MS
-);
-
-// ========== CACHING SYSTEM ==========
-class DataCache {
-    constructor(durationMs) {
-        this.cache = new Map();
-        this.durationMs = durationMs;
-    }
-    
-    get(key) {
-        const cached = this.cache.get(key);
-        if (!cached) return null;
-        
-        const age = Date.now() - cached.timestamp;
-        if (age > this.durationMs) {
-            this.cache.delete(key);
-            return null;
-        }
-        
-        console.log(`📦 Cache hit: ${key} (age: ${Math.round(age/1000)}s)`);
-        return cached.data;
-    }
-    
-    set(key, data) {
-        this.cache.set(key, {
-            data: data,
-            timestamp: Date.now()
-        });
-        console.log(`💾 Cached: ${key}`);
-    }
-    
-    clear() {
-        this.cache.clear();
-        console.log('🗑️ Cache cleared');
-    }
-}
-
-const dataCache = new DataCache(CONFIG.CACHE.DURATION_MS);
 
 // ========== GLOBAL STATE ==========
 let currentChart = null;
@@ -134,202 +17,98 @@ let currentChartType = 'candlestick';
 let priceUpdateInterval = null;
 let searchTimeout = null;
 
-// ========== API HANDLER (Works with both Backend & Direct API) ==========
-class APIHandler {
-    constructor() {
-        this.useBackend = CONFIG.USE_BACKEND;
+// ========== SIMPLE CACHE ==========
+const cache = new Map();
+
+function getCached(key) {
+    const item = cache.get(key);
+    if (!item) return null;
+    if (Date.now() - item.time > CONFIG.CACHE_DURATION) {
+        cache.delete(key);
+        return null;
     }
-    
-    async fetchStockQuote(symbol) {
+    return item.data;
+}
+
+function setCache(key, data) {
+    cache.set(key, { data, time: Date.now() });
+}
+
+// ========== BACKEND API CALLS ==========
+async function fetchStockQuote(symbol) {
+    try {
         // Check cache first
-        if (CONFIG.CACHE.ENABLED) {
-            const cached = dataCache.get(`quote_${symbol}`);
-            if (cached) return cached;
+        const cached = getCached(`quote_${symbol}`);
+        if (cached) {
+            console.log(`📦 Using cached quote for ${symbol}`);
+            return cached;
         }
-        
-        // Check rate limit
-        if (!rateLimiter.canMakeRequest()) {
-            const waitTime = Math.ceil(rateLimiter.getWaitTime() / 1000);
-            throw new Error(`Rate limit reached. Please wait ${waitTime} seconds.`);
-        }
-        
-        try {
-            let data;
-            
-            if (this.useBackend) {
-                // Use backend API
-                data = await this.fetchFromBackend(`/stock/quote/${symbol}`);
-            } else {
-                // Use direct Alpha Vantage API
-                data = await this.fetchFromAlphaVantage('GLOBAL_QUOTE', symbol);
-            }
-            
-            rateLimiter.recordRequest();
-            
-            // Cache the result
-            if (CONFIG.CACHE.ENABLED) {
-                dataCache.set(`quote_${symbol}`, data);
-            }
-            
-            return data;
-            
-        } catch (error) {
-            console.error('❌ Quote fetch error:', error);
-            throw error;
-        }
-    }
-    
-    async fetchStockTimeSeries(symbol) {
-        // Check cache
-        if (CONFIG.CACHE.ENABLED) {
-            const cached = dataCache.get(`timeseries_${symbol}`);
-            if (cached) return cached;
-        }
-        
-        // Check rate limit
-        if (!rateLimiter.canMakeRequest()) {
-            const waitTime = Math.ceil(rateLimiter.getWaitTime() / 1000);
-            throw new Error(`Rate limit reached. Please wait ${waitTime} seconds.`);
-        }
-        
-        try {
-            let data;
-            
-            if (this.useBackend) {
-                data = await this.fetchFromBackend(`/stock/timeseries/${symbol}`);
-            } else {
-                data = await this.fetchFromAlphaVantage('TIME_SERIES_DAILY', symbol);
-            }
-            
-            rateLimiter.recordRequest();
-            
-            if (CONFIG.CACHE.ENABLED) {
-                dataCache.set(`timeseries_${symbol}`, data);
-            }
-            
-            return data;
-            
-        } catch (error) {
-            console.error('❌ Time series fetch error:', error);
-            throw error;
-        }
-    }
-    
-    async fetchFromBackend(endpoint) {
-        const url = `${CONFIG.BACKEND_URL}${endpoint}`;
-        console.log(`🔗 Fetching from backend: ${url}`);
-        
-        const response = await fetch(url);
+
+        console.log(`📡 Fetching quote for ${symbol}...`);
+        const response = await fetch(`${CONFIG.BACKEND_URL}/stock/quote/${symbol}`);
         
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.detail || 'Backend request failed');
+            throw new Error(error.detail || 'Failed to fetch stock data');
         }
         
-        return await response.json();
-    }
-    
-    async fetchFromAlphaVantage(functionType, symbol) {
-        const url = `${CONFIG.API_BASE}?function=${functionType}&symbol=${symbol}&apikey=${CONFIG.API_KEY}`;
-        console.log(`📡 Fetching from Alpha Vantage: ${symbol}`);
-        
-        const response = await fetch(url);
         const data = await response.json();
+        setCache(`quote_${symbol}`, data);
+        return data;
         
-        // Error handling
-        if (data['Error Message']) {
-            throw new Error('Invalid stock symbol');
-        }
-        
-        if (data['Note']) {
-            throw new Error('API rate limit exceeded. Please wait 1 minute.');
-        }
-        
-        // Parse based on function type
-        if (functionType === 'GLOBAL_QUOTE') {
-            return this.parseQuoteData(data, symbol);
-        } else if (functionType === 'TIME_SERIES_DAILY') {
-            return this.parseTimeSeriesData(data, symbol);
-        }
-        
-        throw new Error('Unknown function type');
-    }
-    
-    parseQuoteData(data, symbol) {
-        const quote = data['Global Quote'];
-        if (!quote || Object.keys(quote).length === 0) {
-            throw new Error('No data available for this symbol');
-        }
-        
-        return {
-            symbol: symbol,
-            price: parseFloat(quote['05. price']) || 0,
-            change: parseFloat(quote['09. change']) || 0,
-            changePercent: parseFloat(quote['10. change percent']?.replace('%', '')) || 0,
-            open: parseFloat(quote['02. open']) || 0,
-            high: parseFloat(quote['03. high']) || 0,
-            low: parseFloat(quote['04. low']) || 0,
-            volume: parseInt(quote['06. volume']) || 0,
-            previousClose: parseFloat(quote['08. previous close']) || 0,
-            latestTradingDay: quote['07. latest trading day'] || ''
-        };
-    }
-    
-    parseTimeSeriesData(data, symbol) {
-        const timeSeries = data['Time Series (Daily)'];
-        if (!timeSeries) {
-            throw new Error('No chart data available');
-        }
-        
-        const formattedData = [];
-        const dates = Object.keys(timeSeries).slice(0, 60).reverse();
-        
-        dates.forEach(date => {
-            const values = timeSeries[date];
-            formattedData.push({
-                date: date,
-                open: parseFloat(values['1. open']),
-                high: parseFloat(values['2. high']),
-                low: parseFloat(values['3. low']),
-                close: parseFloat(values['4. close']),
-                volume: parseInt(values['5. volume'])
-            });
-        });
-        
-        return {
-            symbol: symbol,
-            data: formattedData
-        };
-    }
-    
-    async searchStocks(query) {
-        if (!rateLimiter.canMakeRequest()) {
-            throw new Error('Rate limit reached');
-        }
-        
-        const url = `${CONFIG.API_BASE}?function=SYMBOL_SEARCH&keywords=${query}&apikey=${CONFIG.API_KEY}`;
-        console.log(`🔍 Searching: ${query}`);
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        rateLimiter.recordRequest();
-        
-        if (data['Note']) {
-            throw new Error('API rate limit');
-        }
-        
-        return data.bestMatches || [];
+    } catch (error) {
+        console.error('❌ Quote error:', error);
+        throw error;
     }
 }
 
-const apiHandler = new APIHandler();
+async function fetchStockTimeSeries(symbol) {
+    try {
+        const cached = getCached(`timeseries_${symbol}`);
+        if (cached) {
+            console.log(`📦 Using cached timeseries for ${symbol}`);
+            return cached;
+        }
 
-// ========== DASHBOARD INITIALIZATION ==========
+        console.log(`📊 Fetching timeseries for ${symbol}...`);
+        const response = await fetch(`${CONFIG.BACKEND_URL}/stock/timeseries/${symbol}`);
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to fetch chart data');
+        }
+        
+        const data = await response.json();
+        setCache(`timeseries_${symbol}`, data);
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Timeseries error:', error);
+        throw error;
+    }
+}
+
+async function searchStocks(query) {
+    try {
+        console.log(`🔍 Searching: ${query}`);
+        const response = await fetch(`${CONFIG.BACKEND_URL}/stock/search/${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+        
+        return await response.json();
+        
+    } catch (error) {
+        console.error('❌ Search error:', error);
+        throw error;
+    }
+}
+
+// ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Markstro Prediction Dashboard v2.0');
-    console.log(`🔐 Security: ${CONFIG.USE_BACKEND ? 'Backend Mode' : 'Direct API Mode'}`);
-    console.log(`📦 Cache: ${CONFIG.CACHE.ENABLED ? 'Enabled' : 'Disabled'}`);
+    console.log('🚀 Markstro Dashboard Initializing...');
+    console.log(`🔗 Backend: ${CONFIG.BACKEND_URL}`);
     
     setTimeout(() => {
         initializeDashboard();
@@ -337,8 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeDashboard() {
-    console.log('📊 Initializing...');
-    
     // Set date
     const dateInput = document.getElementById('date-input');
     if (dateInput) {
@@ -348,8 +125,8 @@ function initializeDashboard() {
     // Load market data
     loadMarketIndices();
     
-    // Auto-refresh every 5 minutes
-    priceUpdateInterval = setInterval(loadMarketIndices, 300000);
+    // Auto-refresh
+    priceUpdateInterval = setInterval(loadMarketIndices, CONFIG.AUTO_REFRESH_INTERVAL);
     
     // Setup search
     setupSearch();
@@ -357,14 +134,14 @@ function initializeDashboard() {
     console.log('✅ Dashboard ready!');
 }
 
-// ========== MARKET INDICES (SENSEX & NIFTY) ==========
+// ========== MARKET INDICES ==========
 async function loadMarketIndices() {
     console.log('📈 Loading market indices...');
     
-    loadIndexData('SENSEX', 'sensex', CONFIG.INDIAN_PROXIES.SENSEX);
+    loadIndexData('SENSEX', 'sensex', 'INDA');
     
     setTimeout(() => {
-        loadIndexData('NIFTY 50', 'nifty', CONFIG.INDIAN_PROXIES.NIFTY50);
+        loadIndexData('NIFTY 50', 'nifty', 'INDY');
     }, 2000);
 }
 
@@ -373,24 +150,16 @@ async function loadIndexData(displayName, elementPrefix, symbol) {
     const changeEl = document.getElementById(`${elementPrefix}-change`);
     const cardEl = document.getElementById(`${elementPrefix}-card`);
     
-    if (!priceEl || !changeEl || !cardEl) {
-        console.warn(`⚠️ Elements not found for ${elementPrefix}`);
-        return;
-    }
+    if (!priceEl || !changeEl || !cardEl) return;
     
     try {
-        const data = await apiHandler.fetchStockQuote(symbol);
+        const data = await fetchStockQuote(symbol);
         
-        if (!data || !data.price) {
-            throw new Error('No price data');
-        }
-        
-        // Convert to INR (approximate)
+        // Convert to INR
         const inrPrice = data.price * 83;
         priceEl.textContent = `₹${inrPrice.toFixed(2)}`;
         priceEl.classList.remove('loading-pulse');
         
-        // Update change
         const changeText = `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} (${data.changePercent.toFixed(2)}%)`;
         changeEl.textContent = changeText;
         
@@ -423,14 +192,11 @@ async function loadIndexData(displayName, elementPrefix, symbol) {
     }
 }
 
-// ========== SEARCH FUNCTIONALITY ==========
+// ========== SEARCH ==========
 function setupSearch() {
     const searchInput = document.getElementById('stock-search-input');
     if (!searchInput) return;
     
-    console.log('🔍 Search initialized');
-    
-    // Create suggestions dropdown
     let suggestionsDiv = document.getElementById('search-suggestions');
     if (!suggestionsDiv) {
         suggestionsDiv = document.createElement('div');
@@ -439,7 +205,6 @@ function setupSearch() {
         searchInput.parentNode.appendChild(suggestionsDiv);
     }
     
-    // Input listener with debounce
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
         
@@ -451,11 +216,10 @@ function setupSearch() {
         }
         
         searchTimeout = setTimeout(() => {
-            searchStocks(query, suggestionsDiv);
+            handleSearch(query, suggestionsDiv);
         }, 500);
     });
     
-    // Enter key
     searchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             const symbol = this.value.trim().toUpperCase();
@@ -466,7 +230,6 @@ function setupSearch() {
         }
     });
     
-    // Hide on outside click
     document.addEventListener('click', function(e) {
         if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
             suggestionsDiv.style.display = 'none';
@@ -474,73 +237,66 @@ function setupSearch() {
     });
 }
 
-async function searchStocks(query, suggestionsDiv) {
+async function handleSearch(query, suggestionsDiv) {
     suggestionsDiv.innerHTML = '<div class="suggestion-item">🔍 Searching...</div>';
     suggestionsDiv.style.display = 'block';
     
     try {
-        const results = await apiHandler.searchStocks(query);
+        const results = await searchStocks(query);
         
         if (!results || results.length === 0) {
-            suggestionsDiv.innerHTML = '<div class="suggestion-item">❌ No stocks found</div>';
+            suggestionsDiv.innerHTML = '<div class="suggestion-item">❌ No results</div>';
             return;
         }
         
         suggestionsDiv.innerHTML = '';
-        results.slice(0, 8).forEach(match => {
+        results.forEach(match => {
             const item = document.createElement('div');
             item.className = 'suggestion-item';
             item.innerHTML = `
-                <div class="suggestion-symbol">${match['1. symbol']}</div>
-                <div class="suggestion-name">${match['2. name']}</div>
-                <div class="suggestion-type">${match['3. type']} - ${match['4. region']}</div>
+                <div class="suggestion-symbol">${match.symbol}</div>
+                <div class="suggestion-name">${match.name}</div>
+                <div class="suggestion-type">${match.type}</div>
             `;
             
             item.onclick = () => {
-                document.getElementById('stock-search-input').value = match['1. symbol'];
+                document.getElementById('stock-search-input').value = match.symbol;
                 suggestionsDiv.style.display = 'none';
-                openStockDetail(match['1. symbol'], match['2. name']);
+                openStockDetail(match.symbol, match.name);
             };
             
             suggestionsDiv.appendChild(item);
         });
         
     } catch (error) {
-        console.error('Search error:', error);
-        suggestionsDiv.innerHTML = `<div class="suggestion-item">⚠️ ${error.message}</div>`;
+        suggestionsDiv.innerHTML = `<div class="suggestion-item">❌ ${error.message}</div>`;
     }
 }
 
-// ========== STOCK DETAIL MODAL ==========
+// ========== STOCK MODAL ==========
 async function openStockDetail(symbol, displayName) {
-    console.log(`📈 Opening: ${symbol}`);
+    console.log(`📈 Opening ${symbol}...`);
     
     const modal = document.getElementById('stock-detail-modal');
-    if (!modal) {
-        alert('Modal not found');
-        return;
-    }
+    if (!modal) return;
     
     currentSymbol = symbol;
     modal.style.display = 'flex';
-    document.getElementById('modal-stock-name').textContent = `${displayName || symbol} - Loading...`;
+    document.getElementById('modal-stock-name').textContent = `${displayName} - Loading...`;
     
     try {
-        // Fetch quote
-        const quoteData = await apiHandler.fetchStockQuote(symbol);
+        const quoteData = await fetchStockQuote(symbol);
         updateModalInfo(quoteData);
         
-        // Fetch chart
-        const timeSeriesData = await apiHandler.fetchStockTimeSeries(symbol);
+        const timeSeriesData = await fetchStockTimeSeries(symbol);
         currentStockData = timeSeriesData;
         
         createModalChart(timeSeriesData, currentChartType);
         
-        document.getElementById('modal-stock-name').textContent = displayName || symbol;
+        document.getElementById('modal-stock-name').textContent = displayName;
         console.log('✅ Modal loaded');
         
     } catch (error) {
-        console.error('❌ Modal error:', error);
         alert(`Error: ${error.message}`);
         closeStockDetail();
     }
@@ -554,9 +310,7 @@ function updateModalInfo(data) {
     
     const volumeText = data.volume > 1000000 
         ? `${(data.volume / 1000000).toFixed(2)}M` 
-        : data.volume > 1000 
-        ? `${(data.volume / 1000).toFixed(2)}K` 
-        : data.volume.toString();
+        : `${(data.volume / 1000).toFixed(2)}K`;
     document.getElementById('modal-volume').textContent = volumeText;
     
     const changeEl = document.getElementById('modal-change');
@@ -568,17 +322,15 @@ function updateModalInfo(data) {
 function closeStockDetail() {
     const modal = document.getElementById('stock-detail-modal');
     if (modal) modal.style.display = 'none';
-    
     if (currentChart) {
         currentChart.destroy();
         currentChart = null;
     }
 }
 
-// ========== CHART FUNCTIONS ==========
+// ========== CHARTS ==========
 function switchChartType(type) {
     currentChartType = type;
-    console.log(`📊 Chart type: ${type}`);
     
     document.querySelectorAll('.chart-btn').forEach(btn => {
         btn.classList.remove('active');
@@ -597,10 +349,7 @@ function createModalChart(data, type) {
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    
-    if (currentChart) {
-        currentChart.destroy();
-    }
+    if (currentChart) currentChart.destroy();
     
     const dates = data.data.map(d => d.date);
     const chartData = data.data;
@@ -627,7 +376,7 @@ function createCandlestickChart(ctx, dates, data) {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Stock Price',
+                label: 'Price',
                 data: data.map(d => d.high),
                 backgroundColor: data.map(d => d.close >= d.open ? 'rgba(137, 196, 161, 0.8)' : 'rgba(255, 0, 96, 0.8)'),
                 borderColor: data.map(d => d.close >= d.open ? '#89c4a1' : '#FF0060'),
@@ -641,8 +390,8 @@ function createCandlestickChart(ctx, dates, data) {
                 legend: { display: true },
                 tooltip: {
                     callbacks: {
-                        label: (context) => {
-                            const d = data[context.dataIndex];
+                        label: (ctx) => {
+                            const d = data[ctx.dataIndex];
                             return [
                                 `Open: $${d.open.toFixed(2)}`,
                                 `High: $${d.high.toFixed(2)}`,
@@ -663,20 +412,14 @@ function createLineChart(ctx, dates, data) {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Close Price',
+                label: 'Close',
                 data: data.map(d => d.close),
                 borderColor: '#89c4a1',
-                backgroundColor: 'transparent',
                 borderWidth: 3,
-                tension: 0.4,
-                pointRadius: 0
+                tension: 0.4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { display: true } }
-        }
+        options: { responsive: true, maintainAspectRatio: true }
     });
 }
 
@@ -686,20 +429,15 @@ function createAreaChart(ctx, dates, data) {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Close Price',
+                label: 'Close',
                 data: data.map(d => d.close),
                 borderColor: '#89c4a1',
                 backgroundColor: 'rgba(137, 196, 161, 0.3)',
-                borderWidth: 2,
                 fill: true,
                 tension: 0.4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { display: true } }
-        }
+        options: { responsive: true, maintainAspectRatio: true }
     });
 }
 
@@ -711,69 +449,29 @@ function createVolumeChart(ctx, dates, data) {
             datasets: [{
                 label: 'Volume',
                 data: data.map(d => d.volume),
-                backgroundColor: 'rgba(41, 42, 45, 0.7)',
-                borderColor: '#292a2d',
-                borderWidth: 1
+                backgroundColor: 'rgba(41, 42, 45, 0.7)'
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { display: true } }
-        }
+        options: { responsive: true, maintainAspectRatio: true }
     });
 }
 
-// ========== UTILITY FUNCTIONS ==========
+// ========== HELPERS ==========
 function handleSearchEnter(event) {
     if (event.key === 'Enter') {
-        const searchInput = document.getElementById('stock-search-input');
-        const symbol = searchInput.value.trim().toUpperCase();
-        
-        if (symbol) {
-            const suggestionsDiv = document.getElementById('search-suggestions');
-            if (suggestionsDiv) suggestionsDiv.style.display = 'none';
-            openStockDetail(symbol, symbol);
-        }
+        const input = document.getElementById('stock-search-input');
+        const symbol = input.value.trim().toUpperCase();
+        if (symbol) openStockDetail(symbol, symbol);
     }
 }
 
-// Clear cache manually
-function clearCache() {
-    dataCache.clear();
-    console.log('✅ Cache cleared');
-}
-
-// Switch between backend and direct API
-function toggleAPIMode(useBackend) {
-    CONFIG.USE_BACKEND = useBackend;
-    apiHandler.useBackend = useBackend;
-    console.log(`🔄 Switched to ${useBackend ? 'Backend' : 'Direct API'} mode`);
-}
-
-// ========== EVENT LISTENERS ==========
 window.onclick = function(event) {
     const modal = document.getElementById('stock-detail-modal');
-    if (event.target === modal) {
-        closeStockDetail();
-    }
+    if (event.target === modal) closeStockDetail();
 }
 
-// Cleanup
-window.addEventListener('beforeunload', function() {
-    if (priceUpdateInterval) {
-        clearInterval(priceUpdateInterval);
-    }
+window.addEventListener('beforeunload', () => {
+    if (priceUpdateInterval) clearInterval(priceUpdateInterval);
 });
 
-// ========== EXPORT FOR CONSOLE ACCESS ==========
-window.MarkestroDashboard = {
-    setAPIKey: setSecureAPIKey,
-    clearCache: clearCache,
-    toggleAPIMode: toggleAPIMode,
-    getConfig: () => CONFIG,
-    version: '2.0'
-};
-
-console.log('✅ Markstro Dashboard v2.0 loaded successfully');
-console.log('💡 Console commands: window.MarkestroDashboard');
+console.log('✅ Frontend loaded - Waiting for backend...');
