@@ -5,8 +5,10 @@ Run with: python server.py
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -24,6 +26,11 @@ app = FastAPI(
     description="Stock Market & News API with JWT Authentication",
     version="1.0.0"
 )
+
+# Frontend static setup (served from backend for single-site deploy)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+INDEX_FILE = os.path.join(FRONTEND_DIR, "index.html")
 
 # CORS Configuration
 origins = [
@@ -112,6 +119,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 @app.get("/")
 async def root():
     """Root endpoint"""
+    if os.path.exists(INDEX_FILE):
+        return FileResponse(INDEX_FILE)
     return {
         "message": "Markstro API is running!",
         "version": "1.0.0",
@@ -343,6 +352,9 @@ async def http_exception_handler(request, exc):
 # Main
 # ============================================================================
 
+if os.path.isdir(FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
 if __name__ == "__main__":
     import uvicorn
     
@@ -363,10 +375,14 @@ if __name__ == "__main__":
     print("   4. Access protected endpoints")
     print("\n" + "="*70 + "\n")
     
+    port_env = os.environ.get("PORT")
+    host = "0.0.0.0" if port_env else "127.0.0.1"
+    port = int(port_env) if port_env else 8000
+
     uvicorn.run(
-          "server:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True,
+        "server:app",
+        host=host,
+        port=port,
+        reload=port_env is None,
         log_level="info"
     )

@@ -11,7 +11,7 @@ loginBtn.addEventListener('click', () => {
 });
 
 // Backend URL
-const BACKEND_URL = 'https://markstro-backend.vercel.app/api';
+const BACKEND_URL = '/api';
 
 // Signup form
 document.getElementById('signup-form').addEventListener('submit', async (e) => {

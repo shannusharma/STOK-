@@ -5,7 +5,7 @@
 
 // ========== CONFIGURATION ==========
 const CONFIG = {
-    BACKEND_URL: 'https://markstro-backend.vercel.app/api',
+    BACKEND_URL: '/api',
     CACHE_DURATION: 300000,  // 5 minutes
     AUTO_REFRESH: 120000     // 2 minutes
 };
