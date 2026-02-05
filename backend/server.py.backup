@@ -5,6 +5,7 @@ Run with: python server.py
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+#from fastapi.security import HTTPBearer, HTTPAuthCredentials
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -15,8 +16,10 @@ from dotenv import load_dotenv
 # Import authentication services
 from auth_service import JWTService, UserService
 
-# Initialize security
 security = HTTPBearer()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,6 +48,7 @@ app.add_middleware(
 # Initialize services
 jwt_service = JWTService()
 user_service = UserService()
+security = HTTPBearer()
 
 # ============================================================================
 # Pydantic Models
@@ -84,7 +88,7 @@ class UserResponse(BaseModel):
 # Dependencies
 # ============================================================================
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+def get_current_user(credentials: HTTPAuthCredentials = Depends(security)) -> str:
     """
     Dependency to extract and verify JWT token from request header
     
@@ -208,7 +212,7 @@ async def register(request: RegisterRequest):
     )
 
 @app.post("/api/auth/refresh", response_model=TokenResponse)
-async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def refresh_token(credentials: HTTPAuthCredentials = Depends(security)):
     """
     Refresh access token using refresh token
     """
@@ -364,9 +368,10 @@ if __name__ == "__main__":
     print("\n" + "="*70 + "\n")
     
     uvicorn.run(
-          "server:app",
+        app,
         host="127.0.0.1",
         port=8000,
         reload=True,
         log_level="info"
     )
+       pass

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
-    <link rel="stylesheet" href="ui.css">
+    <link rel="stylesheet" href="dashboard.css">
     <title>Stock Predictor Dashboard</title>
 </head>
 <body>
@@ -71,6 +71,56 @@
         <main id="main-content">
             <!-- Content will be dynamically loaded here -->
         </main>
+        <!-- Stock Detail Modal -->
+<div id="stock-detail-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-stock-name">Stock Name</h2>
+            <span class="close-modal" onclick="closeStockDetail()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="stock-info-row">
+                <div class="info-item">
+                    <small>Current Price</small>
+                    <h3 id="modal-current-price">$0.00</h3>
+                </div>
+                <div class="info-item">
+                    <small>Change</small>
+                    <h3 id="modal-change" class="success-text">+0.00%</h3>
+                </div>
+                <div class="info-item">
+                    <small>Open</small>
+                    <h3 id="modal-open">$0.00</h3>
+                </div>
+                <div class="info-item">
+                    <small>High</small>
+                    <h3 id="modal-high">$0.00</h3>
+                </div>
+                <div class="info-item">
+                    <small>Low</small>
+                    <h3 id="modal-low">$0.00</h3>
+                </div>
+                <div class="info-item">
+                    <small>Volume</small>
+                    <h3 id="modal-volume">0</h3>
+                </div>
+            </div>
+            
+            <!-- Chart Type Buttons -->
+            <div class="chart-controls">
+                <button class="chart-btn active" onclick="switchChartType('candlestick')">Candlestick</button>
+                <button class="chart-btn" onclick="switchChartType('line')">Line</button>
+                <button class="chart-btn" onclick="switchChartType('area')">Area</button>
+                <button class="chart-btn" onclick="switchChartType('bar')">Volume</button>
+            </div>
+            
+            <!-- Chart Canvas -->
+            <div class="chart-wrapper">
+                <canvas id="modal-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
     </div>
 
     <!-- ========== STOCK DETAIL MODAL ========== -->
@@ -1044,7 +1094,7 @@ window.addEventListener('beforeunload', () => {
         });
     </script>
 
-    <!-- Load external script.js file for live data functionality -->
-    <script src="script.js"></script>
+    <!-- Load external dashboard.js file for live data functionality -->
+    <script src="dashboard.js"></script>
 </body>
 </html>
